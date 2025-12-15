@@ -28,25 +28,20 @@
 - **Backend:** FastAPI
 - **Frontend:** Streamlit
 
-## 📺 デモの流れ
+## 📺 デモの流れと検証結果
 
-### 🔴 Attack Demo (Vulnerable Agent)
+### 🔴 Attack Demo (Vulnerable Agent) - 問1の検証
+**結果:** 脆弱なエージェントは請求書の隠し命令に従い、攻撃者の口座へ送金を実行してしまいます。
+**(ここに `uploaded_image_1.png` を貼り付けてください: 攻撃成功画面)**
 
-対策を行っていないエージェントの挙動を確認します。
+### 🟢 Defense Demo (Secure Agent) - 問2の検証
+**結果:** Human-in-the-loop 防御により、不審な操作は実行前に一時停止されます。
 
-1. `Vulnerable Agent` タブを選択。
-2. `Process Invoice` をクリック。
-3. **結果:** 隠し命令により、勝手に口座情報が書き換えられ、攻撃者への不正送金が実行されてしまいます（画面に警告が表示されます）。
+**(ここに `uploaded_image_2.png` を貼り付けてください: 防御発動・一時停止画面)**
 
-### 🟢 Defense Demo (Secure Agent)
+**(ここに `uploaded_image_0.png` を貼り付けてください: ツール実行内容の確認画面)**
+*ユーザーは内容を確認し、Rejectボタンで攻撃を阻止できます。*
 
-Human-in-the-loop 対策を行ったエージェントの挙動を確認します。
-
-1. メニューの `Reset System` で銀行の状態を初期化。
-2. `Secure Agent` タブを選択。
-3. `Start Secured Process` をクリック。
-4. **結果:** ツールを実行する直前で処理が一時停止し、**「承認待ち (Approval Needed)」** 状態になります。
-5. ユーザーは操作内容（HACKER-999への送金）を確認し、`Reject` ボタンで阻止できます。
 
 ## 📂 ファイル構成
 
