@@ -4,6 +4,10 @@
 
 自律型AIエージェントに対する **Indirect Prompt Injection** 攻撃と、それに対する **Human-in-the-loop (HITL)** 防御の実効性を比較検証するために作成されました。
 
+---
+
+
+
 ## 🎯 プロジェクトの目的
 
 ### 【問1: 攻撃シナリオ】の実証
@@ -19,14 +23,6 @@
 **結果:** エージェントが悪意ある指示に従おうとしても、最終決定権を持つ人間がその操作内容を確認・拒否（Reject）することで、実被害を未然に防ぐことができる。
 
 ---
-
-## 🛠️ 技術スタック
-
-- **Language:** Python 3.11+ (管理: `uv`)
-- **LLM:** Google Gemini 2.5 Flash
-- **Orchestration:** LangGraph (StateGraph, Checkpointer)
-- **Backend:** FastAPI
-- **Frontend:** Streamlit
 
 ## 📺 デモの流れと検証結果
 
@@ -52,8 +48,6 @@
 - **Orchestration:** LangGraph (StateGraph, Checkpointer)
 - **Backend:** FastAPI
 - **Frontend:** Streamlit
-
----
 
 ## 📂 ファイル構成
 
