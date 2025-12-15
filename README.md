@@ -32,7 +32,7 @@
 
 ### 🔴 Attack Demo (Vulnerable Agent) - 問1の検証
 **結果:** 脆弱なエージェントは請求書の隠し命令に従い、攻撃者の口座へ送金を実行してしまいます。
-**(ここに `uploaded_image_1.png` を貼り付けてください: 攻撃成功画面)**
+**https://github.com/Yuji181181/Security-Demonstration-_for_Tax-Mate-AutoPay/issues/1**
 
 ### 🟢 Defense Demo (Secure Agent) - 問2の検証
 **結果:** Human-in-the-loop 防御により、不審な操作は実行前に一時停止されます。
@@ -49,3 +49,4 @@
 - `src/backend/mock_bank.py`: 攻撃対象となる仮想の銀行API。
 - `src/data/invoices.py`: Prompt Injectionを含む請求書データ。
 - `src/frontend/app.py`: 検証用UI。
+
