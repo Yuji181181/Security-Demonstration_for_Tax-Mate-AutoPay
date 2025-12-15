@@ -37,9 +37,8 @@
 ### 🟢 Defense Demo (Secure Agent) - 問2の検証
 **結果:** Human-in-the-loop 防御により、不審な操作は実行前に一時停止されます。
 
-**(ここに `uploaded_image_2.png` を貼り付けてください: 防御発動・一時停止画面)**
-
-**(ここに `uploaded_image_0.png` を貼り付けてください: ツール実行内容の確認画面)**
+**<img width="1690" height="695" alt="Image" src="https://github.com/user-attachments/assets/1694b334-ed73-4ff3-b7a2-58ac0de8e134" />**
+**<img width="1673" height="807" alt="Image" src="https://github.com/user-attachments/assets/cb2f0c0a-3ec4-44d7-9dd8-3b5dd0f4fcb1" />**
 *ユーザーは内容を確認し、Rejectボタンで攻撃を阻止できます。*
 
 
@@ -49,5 +48,6 @@
 - `src/backend/mock_bank.py`: 攻撃対象となる仮想の銀行API。
 - `src/data/invoices.py`: Prompt Injectionを含む請求書データ。
 - `src/frontend/app.py`: 検証用UI。
+
 
 
