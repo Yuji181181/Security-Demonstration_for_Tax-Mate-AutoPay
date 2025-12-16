@@ -10,10 +10,14 @@ WORKDIR /app
 # 依存関係ファイルをコピー
 COPY pyproject.toml uv.lock ./
 
-# uvを使ってライブラリをインストール
-# --system: 仮想環境を作らずコンテナ環境に直接インストール
+# 【変更点1】仮想環境を作成してインストール (--system を削除)
 # --frozen: uv.lockの内容を厳密に守る
-RUN uv sync --frozen --system
+# --no-dev: 開発用パッケージは入れない（軽量化のため）
+RUN uv sync --frozen --no-dev
+
+# 【変更点2】作成された仮想環境にパスを通す
+# これにより、以降のコマンドは自動的に .venv 内のライブラリを使います
+ENV PATH="/app/.venv/bin:$PATH"
 
 # ソースコード一式をコピー
 COPY . .
@@ -22,5 +26,4 @@ COPY . .
 ENV PORT=8080
 
 # Streamlitの起動コマンド
-# ファイルパス src/frontend/app.py を指定
 CMD ["streamlit", "run", "src/frontend/app.py", "--server.port", "8080", "--server.address", "0.0.0.0"]
