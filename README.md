@@ -1,8 +1,8 @@
 # Security Demonstration: Tax-Mate AutoPay
 
-このリポジトリは、セキュリティ・キャンプ応募課題（LLMアプリケーションへの攻撃と防御）に対する**実証デモアプリケーション**です。
+このリポジトリは、セキュリティ・キャンプ応募課題（LLMアプリケーションへの攻撃と防御）の**実証デモアプリケーション**です。
 
-自律型AIエージェントに対する **Indirect Prompt Injection** 攻撃と、それに対する **Human-in-the-loop (HITL)** 防御の実効性を比較検証するために作成されました。
+自律型AIエージェントに対する **Indirect Prompt Injection** 攻撃と、それに対する **Human-in-the-loop (HITL)** 防御の実効性を比較検証するために作成しました。
 
 ---
 
@@ -27,14 +27,14 @@
 ### 🔴 Attack Demo (Vulnerable Agent) - 問1の検証
 
 **結果:** 脆弱なエージェントは請求書の隠し命令に従い、攻撃者の口座へ送金を実行してしまいます。
-**<img width="1681" height="782" alt="Image" src="https://github.com/user-attachments/assets/ca49de25-5517-4954-9bf3-ab4013ad1c67" />**
+**`<img width="1681" height="782" alt="Image" src="https://github.com/user-attachments/assets/ca49de25-5517-4954-9bf3-ab4013ad1c67" />`**
 
 ### 🟢 Defense Demo (Secure Agent) - 問2の検証
 
 **結果:** Human-in-the-loop 防御により、不審な操作は実行前に一時停止されます。
 
-**<img width="1690" height="695" alt="Image" src="https://github.com/user-attachments/assets/1694b334-ed73-4ff3-b7a2-58ac0de8e134" />**
-**<img width="1673" height="807" alt="Image" src="https://github.com/user-attachments/assets/cb2f0c0a-3ec4-44d7-9dd8-3b5dd0f4fcb1" />**
+**`<img width="1690" height="695" alt="Image" src="https://github.com/user-attachments/assets/1694b334-ed73-4ff3-b7a2-58ac0de8e134" />`**
+**`<img width="1673" height="807" alt="Image" src="https://github.com/user-attachments/assets/cb2f0c0a-3ec4-44d7-9dd8-3b5dd0f4fcb1" />`**
 *ユーザーは内容を確認し、Rejectボタンで攻撃を阻止できます。*
 
 ---
@@ -43,11 +43,15 @@
 
 ### バックエンド
 
+```bash
 uv run uvicorn src.backend.server:app --port 8000
+```
 
 ### フロントエンド
 
+```bash
 uv run streamlit run src/frontend/app.py --server.port 8501
+```
 
 ## 🛠️ 技術スタック
 
@@ -56,6 +60,7 @@ uv run streamlit run src/frontend/app.py --server.port 8501
 - **Orchestration:** LangGraph (StateGraph, Checkpointer)
 - **Backend:** FastAPI
 - **Frontend:** Streamlit
+- **Infrastructure:** Google Cloud Run
 
 ## 📂 ファイル構成
 
@@ -63,4 +68,3 @@ uv run streamlit run src/frontend/app.py --server.port 8501
 - `src/backend/mock_bank.py`: 攻撃対象となる仮想の銀行API
 - `src/data/invoices.py`: Prompt Injectionを含む請求書データ
 - `src/frontend/app.py`: 検証用UI
-
