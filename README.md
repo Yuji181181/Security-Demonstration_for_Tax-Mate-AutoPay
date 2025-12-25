@@ -80,5 +80,5 @@ uv run streamlit run src/frontend/app.py --server.port 8501
 - `src/backend/mock_bank.py`: 攻撃対象となる仮想銀行システム
 - `src/data/invoices.py`: 攻撃が仕込まれた請求書データ
 - `src/frontend/app.py`: StreamlitによるUI実装
-- `verification/verify_guardrail.py`: ガードレール機能のCUI検証スクリプト
+
 
