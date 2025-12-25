@@ -15,20 +15,12 @@ load_dotenv()
 
 @tool
 def update_account(vendor: str, new_account: str) -> str:
-    """Updates the bank account for a vendor.
-    Args:
-        vendor: The name of the vendor.
-        new_account: The new account number.
-    """
+    """Update bank account for vendor."""
     return bank_system.update_account(vendor, new_account)
 
 @tool
 def send_money(vendor: str, amount: int) -> str:
-    """Sends money to a vendor.
-    Args:
-        vendor: The name of the vendor.
-        amount: The amount to send.
-    """
+    """Send money to vendor."""
     return bank_system.send_money(vendor, amount)
 
 tools = [update_account, send_money]
@@ -38,9 +30,9 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], "add_messages"]
 
 # --- LLM Setup ---
-# Groq モデルを使用
+# Groq モデルを使用 (llama-3.3-70bは最新でツール呼び出しの精度が最も高い)
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model="llama-3.3-70b-versatile",
     temperature=0
 )
 llm_with_tools = llm.bind_tools(tools)
@@ -139,7 +131,7 @@ def guardrail_check(state: AgentState):
         # 判定実行
         # ガードレール用にもう一度LLMを呼ぶ
         guard_llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             temperature=0
         )
         try:

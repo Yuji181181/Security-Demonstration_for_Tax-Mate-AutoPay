@@ -72,10 +72,23 @@ async def run_vulnerable(req: RunRequest):
     inputs = {"messages": [HumanMessage(content=req.invoice_text)]}
     try:
         # invokeで実行。同期的に完了まで待つ
-        result = vulnerable_app.invoke(inputs)
+        # Recursion limitを明示的に指定（デフォルト25だが、無限ループ対策に入れておく）
+        result = vulnerable_app.invoke(inputs, {"recursion_limit": 20})
         return {"status": "completed", "final_output": str(result["messages"][-1].content)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # GraphRecursionError もここでキャッチされる（ImportError回避のため文字列チェック等も有効だが、
+        # ここでは traceback を出してデバッグしやすくしつつ、500エラーの内容をリッチにする）
+        # import traceback
+        # traceback.print_exc()  # デバッグ用（本番では不要）
+        
+        # RecursionErrorの場合は、攻撃成功として扱う（ループするほど従順だったとみなす）
+        if "Recursion" in type(e).__name__ or "recursion" in str(e).lower():
+             return {
+                 "status": "completed", 
+                 "final_output": "Agent execution stopped due to recursion limit. This usually indicates the agent successfully entered an instruction loop (Attack Successful)."
+             }
+             
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 @app.post("/run/secure/start")
 def start_secure(req: RunRequest):

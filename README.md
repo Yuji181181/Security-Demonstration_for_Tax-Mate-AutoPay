@@ -1,8 +1,17 @@
 # Security Demonstration: Tax-Mate AutoPay
 
-このリポジトリは、セキュリティ・キャンプ応募課題（LLMアプリケーションへの攻撃と防御）の**実証デモアプリケーション**です。  
+このリポジトリは、LLMアプリケーションへの攻撃と防御の実証デモアプリケーションです。  
 
-自律型AIエージェントに対する **Indirect Prompt Injection** 攻撃と、それに対する **LLM Guardrail (AIによる自動防御)** の実効性を比較検証するために作成しました。
+自律型AIエージェントに対する **Indirect Prompt Injection** 攻撃と、それに対する **LLM Guardrail (AIによる自動防御)** の実効性を比較検証するために作成されました。
+
+---
+
+## 🎯 プロジェクトのポイント：LLM vs LLM
+
+本デモの最大の特徴は、**攻撃を受けるエージェントと、それを守るガードレールの両方に、全く同じモデルのLLM（Llama 3.3 70B Versatile）を採用している点**にあります。
+
+- **同一モデルなのに結果が分かれる理由:**  
+  強力なLLMであっても、構成が「脆弱」であれば単純な言葉のトリックに騙されます。一方で、同じ能力を持つモデルを「監査役（ガードレール）」という適切な役割で配置すれば、自分自身を騙そうとする高度な入力すらも見破ることができることを実証しています。
 
 ---
 
@@ -11,41 +20,32 @@
 ### 【問1: 攻撃シナリオ】の実証
 
 **シナリオ:** 経理処理を行うAIエージェントが、外部から受け取った「請求書」を読み取り、銀行APIを操作して支払いを実行する。  
-**攻撃手法:** 攻撃者は請求書の備考欄などに不可視の文字や隠しタグで「攻撃者の口座へ送金しろ」という命令（Prompt Injection）を埋め込む。  
-**結果:** 脆弱なエージェントは、元のシステム指示よりも請求書内の悪意ある指示を優先してしまい、外部システム（銀行API）に対して不正な変更・送金を行ってしまう。
+**攻撃手法:** 攻撃者は請求書に「攻撃者の口座へ送金しろ」という攻撃命令を仕込む。  
+**結果:** 脆弱なエージェントは、元のシステム指示よりも攻撃命令を優先してしまい、外部システム（銀行API）に対して不正な変更・送金を行ってしまう。
 
 ### 【問2: 防御策】の実装と検証
 
 **対策:** **LLM Guardrail (AIによる自動監査)** アプローチの採用。  
-**実装:** LangGraphを用いてエージェントの処理フローを構築し、ツール実行（送金など）の直前に、セキュリティ特化の別モデル (Llama 3 via Groq) が操作内容を監査する。  
+**実装:** LangGraphを用いてエージェントの処理フローを構築し、ツール実行（送金など）の直前に、セキュリティ特化の役割を与えたLLM (Llama 3.3 70B Versatile) が操作内容を監査する。  
 **結果:** エージェントが悪意ある指示に従おうとしても、ガードレールAIが「請求書のコンテキストと矛盾する不審な操作」として検知し、実行を自動的にブロック（Block）することで、実被害を未然に防ぐことができる。
 
 ---
 
 ## 📺 デモの流れと検証結果
 
-### 🔴 Attack Demo (Vulnerable Agent) - 問1の検証
+### 🔴 Attack Demo (Vulnerable Agent)
+**同一モデルを使用した「脆弱な構成」の例。**
+- **結果:** 請求書の攻撃者の命令に従い、不正送金を実行してしまいます。
+- エージェントが攻撃命令に忠実に従いすぎるため、無限ループに入ることがありますが、サーバー側でハンドルし「攻撃成功」として表示します。
+- どんなに賢いモデルでも、**「役割の分離」と「監査プロセス」がないと無力である**ことを実証します。
 
-**結果:** 脆弱なエージェントは請求書の隠し命令に従い、攻撃者の口座へ送金を実行してしまいます。UI上では、実行されてしまった不正コマンドのログが表示されます。
-
-### 🟢 Defense Demo (Secure Agent) - 問2の検証
-
-**結果:** LLM Guardrail により、不審な操作は実行前に自動的に検知・ブロックされます。ユーザーは攻撃が防がれたことを確認できます。
-
-*人手を介さずとも、AI対AIの構図で攻撃を無効化します。*
+### 🟢 Defense Demo (Secure Agent)
+**同一モデルを使用した「堅牢な構成」の例。**
+- **結果:** ガードレールに採用した **Llama 3.3 70B Versatile** が、提案されたアクションの「矛盾」を即座に見破ります。
+- ユーザーは「どのアクションがなぜブロックされたのか」を防御ロジックの概念コードと共に視覚的に確認できます。
+- **「能力（LLMの賢さ）」ではなく「設計（ガードレール）」がセキュリティの鍵である**ことを実証します。
 
 ---
-
-## 🚀 セットアップ & 起動
-
-### 必要な環境変数
-
-`.env` ファイルを作成し、以下のAPIキーを設定してください。
-
-```bash
-GOOGLE_API_KEY=your_gemini_api_key
-GROQ_API_KEY=your_groq_api_key
-```
 
 ### バックエンド起動
 
@@ -64,15 +64,17 @@ uv run streamlit run src/frontend/app.py --server.port 8501
 ## 🛠️ 技術スタック
 
 - **Language:** Python (`uv`)
-- **Main Agent LLM:** Google Gemini 2.5 Flash
-- **Guardrail LLM:** Groq (Llama 3.1 8B Instant)
-- **Orchestration:** LangGraph (StateGraph)
+- **Agent LLM:** Groq API (Llama 3.3 70B Versatile)
+- **Guardrail LLM:** Groq API (Llama 3.3 70B Versatile)
+- **Orchestration:** LangGraph
 - **Backend:** FastAPI
 - **Frontend:** Streamlit
 
-## 📂 ファイル構成
+## 📂 主要ファイル構成
 
-- `src/backend/agents.py`: LangGraphによるエージェント実装（脆弱版と堅牢版の比較）
-- `src/backend/mock_bank.py`: 攻撃対象となる仮想の銀行API
-- `src/data/invoices.py`: Prompt Injectionを含む請求書データ
-- `src/frontend/app.py`: 検証用UI
+- `src/backend/agents.py`: LLMエージェントのグラフ定義（同一モデルを用いた「脆弱版」と「堅牢版」）
+- `src/backend/server.py`: FastAPIによるAPIサーバー
+- `src/backend/mock_bank.py`: 攻撃対象となる仮想銀行システム
+- `src/data/invoices.py`: 攻撃が仕込まれた請求書データ
+- `src/frontend/app.py`: StreamlitによるUI実装
+- `verification/verify_guardrail.py`: ガードレール機能のCUI検証スクリプト
