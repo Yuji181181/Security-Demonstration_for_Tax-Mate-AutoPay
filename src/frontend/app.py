@@ -47,6 +47,7 @@ def run_vulnerable():
         st.session_state['vulnerable_running'] = False
 
 def start_secure():
+    st.session_state['secure_running'] = True
     try:
         res = requests.post(f"{API_URL}/run/secure/start", json={"invoice_text": st.session_state.get('invoice_text')})
         try:
@@ -54,38 +55,24 @@ def start_secure():
         except json.JSONDecodeError:
             st.error(f"Server Error (Status {res.status_code}): {res.text}")
             return
-
+            
         if res.status_code != 200:
             st.error(f"API Error: {data.get('detail', 'Unknown error')}")
             return
             
-        st.session_state['secure_thread_id'] = data.get('thread_id')
+        # 完了後の処理
         st.session_state['secure_status'] = data.get('status')
-        st.session_state['pending_tool_calls'] = data.get('tool_calls', [])
-        st.session_state['secure_logs_before'] = get_logs() # 実行前のログ
+        st.session_state['secure_final_output'] = data.get('final_output')
+        st.session_state['secure_thread_id'] = data.get('thread_id')
+        st.session_state['secure_logs_before'] = get_logs() # ログ取得（あまり意味ないかもだが）
+        
     except Exception as e:
         st.error(f"Error starting secure agent: {e}")
+    finally:
+        st.session_state['secure_running'] = False
 
-def resume_secure(action):
-    if 'secure_thread_id' not in st.session_state:
-        return
-    
-    try:
-        res = requests.post(f"{API_URL}/run/secure/resume", json={
-            "thread_id": st.session_state['secure_thread_id'],
-            "action": action
-        })
-        data = res.json()
-        st.session_state['secure_status'] = "completed"
-        st.session_state['secure_final_output'] = data.get('final_output')
-        
-        if action == "approve":
-            st.toast("Operation Approved & Executed", icon="👍")
-        else:
-            st.toast("Operation Rejected", icon="🛑")
-            
-    except Exception as e:
-        st.error(f"Error resuming: {e}")
+# resume_secure removed
+
 
 # --- UI Layout ---
 st.title("Tax-Mate AutoPay: Security Demo 🛡️")
@@ -140,56 +127,36 @@ with tab1:
                     st.write("**エージェントの応答:**")
                     st.write(result.get("final_output"))
 
+
 # --- TAB 2: Secure ---
 with tab2:
-    st.markdown("### 🟢 堅牢なエージェント (Human-in-the-loop)")
+    st.markdown("### 🟢 堅牢なエージェント (LLM Guardrail)")
     st.markdown("""
-    このエージェントは、重要なツール実行の前で一時停止し、人間の承認を求めます。
-    **検証ポイント:** 攻撃者の命令が実行される前に停止し、ユーザーがそれを阻止できるか確認してください。
+    このエージェントは、**LLMガードレール**によって守られています。
+    ツール実行前に別のセキュリティAIが監査を行い、不正な操作（Prompt Injectionなど）を自動的にブロックします。
+    **検証ポイント:** 攻撃者の命令が自動的に検知され、ブロックされるか確認してください。
     """)
     
-    col_start, col_dummy = st.columns([1, 4])
-    with col_start:
-         if st.button("🛡️ 安全なプロセスを開始 (防御モード)", key="start_sec"):
-             with st.spinner("エージェントが分析中..."):
-                 start_secure()
+    if st.button("🛡️ 安全なプロセスを開始 (防御モード)", key="start_sec"):
+         with st.spinner("エージェント実行中 & ガードレール監査中..."):
+             start_secure()
     
-    if st.session_state.get('secure_status') == 'paused':
-        st.info("✋ **【防御発動！】不正な操作を食い止めました**", icon="🛡️")
-        st.markdown("""
-        ### 🛑 Human-in-the-loop (HITL) による保護
-        **エージェントは攻撃者の指示に従い以下の操作を実行しようとしましたが、システムが自動的に一時停止しました。**
-        
-        ここであなたが内容を確認し、**「拒否 (Reject)」** することで攻撃を無力化できます。
-        """)
-        
-        tool_calls = st.session_state.get('pending_tool_calls', [])
-        for tc in tool_calls:
-            with st.container(border=True):
-                st.error(f"🚨 **実行されようとしていた危険な操作:** `{tc['name']}`")
-                st.code(json.dumps(tc['args'], indent=2, ensure_ascii=False), language="json")
-        
-        col_app, col_rej = st.columns(2)
-        with col_app:
-            if st.button("✅ 承認して実行 (Approve)", use_container_width=True, help="これはデモです。承認すると攻撃が成功してしまいます。"):
-                 resume_secure("approve")
-                 st.rerun()
-        with col_rej:
-            if st.button("⛔ **拒否して防御する (Reject)**", use_container_width=True, type="primary"):
-                 resume_secure("reject")
-                 st.rerun()
-                 
-    elif st.session_state.get('secure_status') == 'completed':
-        # 最終的な結果判定
+    if st.session_state.get('secure_status') == 'completed':
         final_output = st.session_state.get('secure_final_output', "")
-        if "User rejected" in final_output or "拒否" in final_output: # 拒否した場合
+        
+        # ガードレールによるブロック判定
+        # agents.py で指定した警告メッセージが含まれているか確認
+        if "【セキュリティ警告】" in final_output and "ブロックされました" in final_output:
              st.success("✅ 【防御成功！】", icon="🛡️")
              st.markdown("""
-             ### 👏 攻撃を阻止しました
-             **Human-in-the-loop により、AIによる不正なツール実行を水際で防ぐことができました。**
-             ユーザーの判断（Reject）により、不正送金は行われていません。
+             ### 🔒 ガードレールが攻撃を無効化しました
+             **セキュリティAIが不正なツール操作を検知し、実行をブロックしました。**
+             人手を介さずとも、自動的に攻撃を防ぐことができました。
              """)
+             st.error(f"🤖 **エージェントからの報告:**Link\n{final_output}")
+             
         else:
-             st.info("プロセスが完了しました。")
+             st.info("プロセスが完了しました（ブロックなし）。")
              st.write("**エージェントの応答:**")
              st.write(final_output)
+

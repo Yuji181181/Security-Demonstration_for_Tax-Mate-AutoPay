@@ -83,74 +83,23 @@ def start_secure(req: RunRequest):
     config = {"configurable": {"thread_id": thread_id}}
     inputs = {"messages": [HumanMessage(content=req.invoice_text)]}
     
-    # ツール実行前で停止するはず
-    result = secure_app.invoke(inputs, config=config)
-    
-    # 次の状態を確認
-    snapshot = secure_app.get_state(config)
-    next_step = snapshot.next
-    
-    tool_calls = []
-    if snapshot.values and "messages" in snapshot.values:
-        last_msg = snapshot.values["messages"][-1]
-        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-            tool_calls = last_msg.tool_calls
-
-    return {
-        "status": "paused" if next_step else "completed",
-        "thread_id": thread_id,
-        "next": next_step,
-        "tool_calls": tool_calls
-    }
-
-@app.post("/run/secure/resume")
-def resume_secure(req: ResumeRequest):
-    config = {"configurable": {"thread_id": req.thread_id}}
-    snapshot = secure_app.get_state(config)
-    
-    if not snapshot.next:
-        return {"status": "error", "message": "No pending steps for this thread."}
-
-    if req.action == "reject":
-        # 拒否された場合、ツールを実行せず、拒否メッセージをエージェントに返して終了させる（あるいはループさせる）
-        # ここではシンプルに「拒否されたのでツール出力をエラーとして返す」ことでエージェントに知らせる
-        # または、単に中断して終了扱いにする。
+    # ガードレール付きエージェントを実行（非同期/中断なしで完了まで実行）
+    try:
+        result = secure_app.invoke(inputs, config=config)
+        final_output = str(result["messages"][-1].content)
         
-        # 今回はToolNodeをスキップするのではなく、
-        # "Tool execution rejected by user" というToolMessageを挿入して再開する方法がスマートだが、
-        # 実装を簡単にするため、ユーザーからのメッセージとして「拒否」を送り、エージェントを動かす。
-        # ただし interrupt_before="tools" なので、次は "tools" ノードに行こうとする。
-        # ここで update_state を使って "tools" ノードをスキップあるいはダミー結果を入れる必要がある。
+        # ガードレールがブロックしたかどうかを判定するためにツールコール履歴を確認することも可能だが
+        # 基本的に final_output に結果が含まれている
         
-        # 最も簡単な実装: ツール呼び出しIDに対応するエラー出力を注入して進める
-        last_msg = snapshot.values["messages"][-1]
-        tool_calls = last_msg.tool_calls
-        
-        # ツール呼び出しに対する拒否レスポンスを作成(ToolMessage)
-        # Type check to avoid crashes
-        if tool_calls:
-            from langchain_core.messages import ToolMessage
-            tool_messages = [
-                ToolMessage(
-                    tool_call_id=tc["id"],
-                    content="Error: User rejected this operation via Human-in-the-loop validation."
-                ) for tc in tool_calls
-            ]
-            # update_stateでステートを更新（as_node="tools"とすることで、toolsノードが実行されたかのように振る舞う）
-            secure_app.update_state(config, {"messages": tool_messages}, as_node="tools")
-            
-            # 再開 (toolsノードはスキップされ、エージェントに戻る)
-            result = secure_app.invoke(None, config=config)
-            return {"status": "rejected_and_completed", "final_output": str(result["messages"][-1].content)}
-        else:
-             return {"status": "error", "message": "No tool calls found to reject."}
+        return {
+            "status": "completed",
+            "thread_id": thread_id,
+            "final_output": final_output
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    elif req.action == "approve":
-        # 承認された場合、そのまま続行 (Noneを渡して再開すると、保留されていたToolNodeが実行される)
-        result = secure_app.invoke(None, config=config)
-        return {"status": "approved_and_completed", "final_output": str(result["messages"][-1].content)}
-    
-    return {"status": "invalid_action"}
+# Resume endpoint removed as HITL is replaced by LLM Guardrail
 
 @app.get("/state/{thread_id}")
 def get_state(thread_id: str):
