@@ -2,7 +2,7 @@
 
 このリポジトリは、LLMアプリケーションへの攻撃と防御の実証デモアプリケーションです。  
 
-自律型AIエージェントに対する **Indirect Prompt Injection** 攻撃と、それに対する **LLM Guardrail (AIによる自動防御)** の実効性を比較検証するために作成されました。
+自律型AIエージェントに対する **Indirect Prompt Injection（プロンプトによる攻撃）** と、それに対する **LLM Guardrail (AIによる自動防御)** を比較検証するために作成しました。
 
 ---
 
@@ -10,8 +10,8 @@
 
 本デモの最大の特徴は、**攻撃を受けるエージェントと、それを守るガードレールの両方に、全く同じモデルのLLM（Llama 3.3 70B Versatile）を採用している点**にあります。
 
-- **同一モデルなのに結果が分かれる理由:**  
-  強力なLLMであっても、構成が「脆弱」であれば単純な言葉のトリックに騙されます。一方で、同じ能力を持つモデルを「監査役（ガードレール）」という適切な役割で配置すれば、自分自身を騙そうとする高度な入力すらも見破ることができることを実証しています。
+**同一モデルなのに結果が分かれる理由:**  
+強力なLLMであっても、構成が「脆弱」であれば単純な言葉のトリックに騙されます。一方で、同じ能力を持つモデルを「監査役（ガードレール）」という適切な役割で配置すれば、自分自身を騙そうとする高度な入力すらも見破ることができることを実証しています。
 
 ---
 
@@ -38,14 +38,19 @@
 - **結果:** 請求書の攻撃者の命令に従い、不正送金を実行してしまいます。
 - エージェントが攻撃命令に忠実に従いすぎるため、無限ループに入ることがありますが、サーバー側でハンドルし「攻撃成功」として表示します。
 - どんなに賢いモデルでも、**「役割の分離」と「監査プロセス」がないと無力である**ことを実証します。
+<img width="1727" height="521" alt="Image" src="https://github.com/user-attachments/assets/c842b1d5-88de-46b6-8cb0-0724014aed5b" />
+<img width="1722" height="734" alt="Image" src="https://github.com/user-attachments/assets/8bfbd6d2-25da-4b96-8fac-9f2b34757961" />
 
 ### 🟢 Defense Demo (Secure Agent)
 **同一モデルを使用した「堅牢な構成」の例。**
 - **結果:** ガードレールに採用した **Llama 3.3 70B Versatile** が、提案されたアクションの「矛盾」を即座に見破ります。
 - ユーザーは「どのアクションがなぜブロックされたのか」を防御ロジックの概念コードと共に視覚的に確認できます。
 - **「能力（LLMの賢さ）」ではなく「設計（ガードレール）」がセキュリティの鍵である**ことを実証します。
+<img width="1731" height="806" alt="Image" src="https://github.com/user-attachments/assets/5ecb7fd1-b7d2-49f1-848a-c21c2f4f92b2" />
+<img width="1726" height="729" alt="Image" src="https://github.com/user-attachments/assets/f48b1115-0b53-49bf-a2fd-e880c1726ffd" />
 
 ---
+## 起動コマンド
 
 ### バックエンド起動
 
@@ -59,11 +64,9 @@ uv run uvicorn src.backend.server:app --port 8000
 uv run streamlit run src/frontend/app.py --server.port 8501
 ```
 
----
-
 ## 🛠️ 技術スタック
 
-- **Language:** Python (`uv`)
+- **Language:** Python (uv)
 - **Agent LLM:** Groq API (Llama 3.3 70B Versatile)
 - **Guardrail LLM:** Groq API (Llama 3.3 70B Versatile)
 - **Orchestration:** LangGraph
@@ -78,3 +81,4 @@ uv run streamlit run src/frontend/app.py --server.port 8501
 - `src/data/invoices.py`: 攻撃が仕込まれた請求書データ
 - `src/frontend/app.py`: StreamlitによるUI実装
 - `verification/verify_guardrail.py`: ガードレール機能のCUI検証スクリプト
+
