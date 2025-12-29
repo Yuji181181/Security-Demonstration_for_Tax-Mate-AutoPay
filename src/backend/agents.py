@@ -204,3 +204,102 @@ workflow_secure.add_edge("tools", "agent")
 memory = MemorySaver()
 
 secure_app = workflow_secure.compile(checkpointer=memory)
+
+# --- HITL Agent Construction (Human-in-the-Loop) ---
+# 高額送金など重要な操作は人間の承認を要求します。
+
+hitl_system_prompt = """
+あなたは経理担当のエージェントです。
+受け取った請求書の指示に従って、適切にツール（update_account, send_money）を呼び出してください。
+
+【重要】
+高額な送金（50,000円以上）や口座変更は、人間の承認が必要です。
+承認待ちの状態になった場合は、承認されるまで待機してください。
+"""
+
+def hitl_check(state: AgentState):
+    """
+    ツール実行前に、人間の承認が必要かチェックします。
+    高額送金の場合は、承認待ち状態にします。
+    """
+    messages = state["messages"]
+    last_message = messages[-1]
+    
+    # ツール呼び出しがない場合は何もしない
+    if not last_message.tool_calls:
+        return {}
+    
+    tool_calls = last_message.tool_calls
+    
+    # 承認が必要な操作をチェック
+    for tc in tool_calls:
+        if tc['name'] == 'send_money':
+            amount = tc.get('args', {}).get('amount', 0)
+            if amount >= 50000:
+                # 承認待ち状態を示すメッセージを返す
+                return {
+                    "messages": [
+                        ToolMessage(
+                            content=f"⏸️ 【承認待ち】{amount:,}円の送金は人間の承認が必要です。承認されるまで実行を保留します。",
+                            tool_call_id=tc['id']
+                        )
+                    ]
+                }
+        elif tc['name'] == 'update_account':
+            # 口座変更も承認が必要
+            return {
+                "messages": [
+                    ToolMessage(
+                        content=f"⏸️ 【承認待ち】口座情報の変更は人間の承認が必要です。承認されるまで実行を保留します。",
+                        tool_call_id=tc['id']
+                    )
+                ]
+            }
+    
+    # 承認不要ならそのまま実行
+    return {}
+
+def call_hitl_model(state: AgentState):
+    messages = state["messages"]
+    if not isinstance(messages[0], SystemMessage):
+        messages = [SystemMessage(content=hitl_system_prompt)] + messages
+    
+    response = llm_with_tools.invoke(messages)
+    return {"messages": [response]}
+
+def route_after_hitl(state: AgentState):
+    messages = state["messages"]
+    last_message = messages[-1]
+    
+    # HITL が承認待ちメッセージを追加した場合 -> 中断（interrupt）
+    if isinstance(last_message, ToolMessage) and "承認待ち" in last_message.content:
+        return "human_approval"
+    
+    # ツール呼び出しが残っている場合 -> toolsへ
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+        
+    return END
+
+workflow_hitl = StateGraph(AgentState)
+workflow_hitl.add_node("agent", call_hitl_model)
+workflow_hitl.add_node("hitl_check", hitl_check)
+workflow_hitl.add_node("tools", ToolNode(tools))
+
+workflow_hitl.add_edge(START, "agent")
+workflow_hitl.add_edge("agent", "hitl_check")
+
+workflow_hitl.add_conditional_edges(
+    "hitl_check",
+    route_after_hitl,
+    {
+        "agent": "agent",
+        "tools": "tools",
+        "human_approval": END,  # 承認待ちで中断
+        END: END
+    }
+)
+workflow_hitl.add_edge("tools", "agent")
+
+hitl_memory = MemorySaver()
+hitl_app = workflow_hitl.compile(checkpointer=hitl_memory)

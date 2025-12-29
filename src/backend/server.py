@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
 
-from src.backend.agents import vulnerable_app, secure_app
+from src.backend.agents import vulnerable_app, secure_app, hitl_app
 from src.backend.mock_bank import bank_system
 from src.backend.context import user_role_var
 from src.data.invoices import POISONED_INVOICE_TEXT
@@ -131,7 +131,68 @@ def start_secure(req: RunRequest):
     finally:
         user_role_var.reset(token)
 
-# Resume endpoint removed as HITL is replaced by LLM Guardrail
+# --- HITL Endpoints (Human-in-the-Loop) ---
+
+@app.post("/run/hitl/start")
+def start_hitl(req: RunRequest):
+    """HITL付きエージェントを開始"""
+    token = user_role_var.set(req.role)
+    
+    thread_id = str(uuid.uuid4())
+    config = {"configurable": {"thread_id": thread_id}}
+    inputs = {"messages": [HumanMessage(content=req.invoice_text)]}
+    
+    try:
+        result = hitl_app.invoke(inputs, config=config)
+        final_output = str(result["messages"][-1].content)
+        
+        # 承認待ち状態かチェック
+        is_pending = any("承認待ち" in str(msg.content) for msg in result["messages"] if hasattr(msg, 'content'))
+        
+        return {
+            "status": "pending_approval" if is_pending else "completed",
+            "thread_id": thread_id,
+            "final_output": final_output,
+            "messages": [{"type": msg.type, "content": str(msg.content)} for msg in result["messages"][-3:]]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        user_role_var.reset(token)
+
+class ApprovalRequest(BaseModel):
+    thread_id: str
+    approved: bool  # True = 承認, False = 拒否
+
+@app.post("/run/hitl/approve")
+def approve_hitl(req: ApprovalRequest):
+    """承認待ちの操作を承認または拒否"""
+    config = {"configurable": {"thread_id": req.thread_id}}
+    
+    try:
+        # 現在の状態を取得
+        snapshot = hitl_app.get_state(config)
+        
+        if req.approved:
+            # 承認: ツールを実行
+            # 承認待ちメッセージを削除して、ツール実行を続行
+            # 簡易実装: 新しいメッセージで続行を指示
+            result = hitl_app.invoke(
+                {"messages": [HumanMessage(content="承認されました。処理を続行してください。")]},
+                config=config
+            )
+            return {
+                "status": "approved",
+                "final_output": str(result["messages"][-1].content)
+            }
+        else:
+            # 拒否: 処理を中止
+            return {
+                "status": "rejected",
+                "final_output": "操作が拒否されました。処理を中止します。"
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/state/{thread_id}")
 def get_state(thread_id: str):
