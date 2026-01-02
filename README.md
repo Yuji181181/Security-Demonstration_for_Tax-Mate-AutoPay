@@ -68,23 +68,6 @@
 
 ---
 
-## 起動方法
-
-
-### バックエンド起動
-
-```bash
-uv run uvicorn src.backend.server:app --port 8000
-```
-
-### フロントエンド起動
-
-```bash
-uv run streamlit run src/frontend/app.py --server.port 8501
-```
-
-
-
 ## デモの使い方
 
 1. **サイドバーで権限を選択**
@@ -127,6 +110,23 @@ uv run streamlit run src/frontend/app.py --server.port 8501
 
 ---
 
+## 起動方法
+
+
+### バックエンド起動
+
+```bash
+uv run uvicorn src.backend.server:app --port 8000
+```
+
+### フロントエンド起動
+
+```bash
+uv run streamlit run src/frontend/app.py --server.port 8501
+```
+
+---
+
 ## 技術スタック
 
 - **Language:** Python 3.12 (uv)
@@ -134,7 +134,6 @@ uv run streamlit run src/frontend/app.py --server.port 8501
 - **Agent Framework:** LangGraph
 - **Backend:** FastAPI
 - **Frontend:** Streamlit
-- **Security:** RBAC, Audit Logging, Human-in-the-Loop
 - **infrastructure:** Google Cloud Run
 
 ---
@@ -152,4 +151,5 @@ src/
 │   └── app.py             # Streamlit UI
 └── data/
     └── invoices.py        # 攻撃が仕込まれた請求書データ
+
 ```
