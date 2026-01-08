@@ -54,15 +54,16 @@ if user_role == "ADMIN":
 else:
     st.sidebar.warning("🔒 **READ_ONLY権限**\n\n書き込み操作はブロックされます")
 
-# Detect role change and reset agent memory
+# Detect role change and reset agent memory + bank logs
 if 'previous_role' not in st.session_state:
     st.session_state['previous_role'] = user_role
 
 if st.session_state['previous_role'] != user_role:
-    # Role changed - reset agent memory (but preserve bank logs)
+    # Role changed - reset agent memory AND bank logs
     try:
         requests.post(f"{API_URL}/reset_agents")
-        st.toast(f"🔄 権限を {user_role} に変更しました（エージェントメモリをリセット）", icon="🔄")
+        requests.post(f"{API_URL}/reset")  # Also reset bank logs
+        st.toast(f"🔄 権限を {user_role} に変更しました（システムをリセット）", icon="🔄")
     except Exception as e:
         # Silently fail if backend is not running
         pass
